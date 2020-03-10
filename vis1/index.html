@@ -1,0 +1,244 @@
+<html>
+<meta charset="UTF-8">
+
+<head>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://unpkg.com/topojson@3"></script>
+
+<body>
+  <h1 id="mainTitle"><span class="red">Japan</span>'s strategic exports to become a large economy</h1>
+
+  <p id="top_description">
+    The 1990s were a time of great economic shift, a time where global economies
+    shifted from a ‘planned’ to a more ‘laissez-faire’ approach. The following graphs are an attempt to see if Japan
+    saw considerable shift during these times, or how the rest of the world responded to these changes and Japan benefited from it.
+  </p>
+
+  <p id="top_description">
+    Through these visualizations we seek to answer a few questions:
+    <ul>
+      <li> Which countries are the biggest consumers of Japanese goods?</li>
+      <li/> What are the Japanese goods most in demand?
+      <li/> Which industrial sector contributes most to Japan's economy?
+      <li> How have both of these trends shifted after a 27 year span?</li>
+      <ul>
+    </ul>
+ </p>
+
+ <p id="top_description"> These visualizations draw from the Japanese trade dataset found on Kaggle:
+   <a href =" https://www.kaggle.com/zanjibar/japan-trade-statistics">link</a></p>
+
+  <h1><span class="red">Japanese</span> exports in <u>1988</u></h1>
+  <p id="top_description"> These chart show the Yen value of Japanese exports bought countries around the globe.</p>
+  <p id="vis"></p>
+
+  <h1><span class="red">Japanese</span> exports in <u>2015</u></h1>
+  <p id="vis2"></p>
+
+  <!-- Data set from  https://www.kaggle.com/zanjibar/japan-trade-statistics -->
+
+  <h1><span class="red">Japan</span>'s exported goods</h1>
+  <p id="top_description"> This chart shows the top 10 types of goods traded in both years
+    (These good types have not been upsurped in demand by any others) the economic benefit Japan gained from these exports, both in 1988
+    and 2015. All values have been adjusted for inflation. <b>Notable finding:</b> While base metal for cutlery was the 10th most common good exported in
+    both 1988 and 2015, its value standardzied for economic impact, returns a pixel value of 0.
+    This is the extent to which Japan's economy has grown since 1988. </p>
+
+  <p id="graph_01">
+    <script>
+      d3.csv("./dataset/overall.csv").then((data) => {
+
+
+        // getting all unique good types since overall csv contains both years
+        var goods = [];
+        var years = [1988, 2015];
+
+        data.forEach((d, i) => {
+          d['value'] = Number(d['Value_in_Yen']);
+          d['year'] = Number(d['Year']);
+          goods.push(d["hs2_name"]);
+        });
+
+        var goods = [...new Set(goods)];
+
+
+        console.log(data);
+
+        var width = 960;
+        var height = 600;
+        var margin = {
+          top: 40,
+          bottom: 40,
+          right: 40,
+          left: 40
+        }
+        var chartWidth = width - margin.left - margin.right;
+        var chartHeight = height - margin.top - margin.bottom;
+        var axisTicks = {
+          qty: 5,
+          outerSize: 0,
+          dateFormat: '%y'
+        };
+
+        // creating svg
+        var svg = d3.select("#graph_01").append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .style("-webkit-filter", "drop-shadow( 0px 10px 0.5rem #1c1e20)")
+          .style("filter", "drop-shadow( 0px 10px 0.5rem #1c1e20)")
+          .style("padding-bottom", "3rem")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Add the bars
+        svg.append('rect')
+          .attr('width', width)
+          .attr('height', height)
+          .attr("rx", 10)
+          .attr("ry", 10)
+          .attr('fill', '#1c1e20')
+          .attr("transform", "translate(" + (-margin.left) + "," + (-margin.top) + ")");
+
+
+        // Range round band learned from d3_noobs bar chart tutorial https://bl.ocks.org/d3noob/8952219
+        var yearScale = d3.scaleBand()
+          .domain(years)
+          .rangeRound([0, chartHeight - 20]) //to give some breathing space in the graph
+          .paddingInner(0.1);
+
+        var goodScale = d3.scaleBand()
+          .domain(goods)
+          .range([0, yearScale.bandwidth()])
+          .padding(0.2);
+
+        var valueScale = d3.scaleLinear()
+          .domain(d3.extent(data, d => d['value']))
+          .range([0, chartWidth]);
+
+        var goodScaleColor = d3.scaleOrdinal(d3.schemeTableau10);
+
+        // Tutorial followed from https://d3-wiki.readthedocs.io/zh_CN/master/SVG-Axes/
+        var currencyFormatter = d3.formatPrefix(".0", 1e8);
+        var xAxis = d3.axisBottom(valueScale)
+          .tickFormat(function (d) {
+            return "¥ " + currencyFormatter(d);
+          })
+          .tickSizeOuter(axisTicks.outerSize);
+
+        var yAxis = d3.axisLeft(yearScale).tickSizeOuter(axisTicks.outerSize);
+
+        var xGridlines = d3.axisBottom(valueScale)
+          .tickSize(chartHeight)
+          .tickFormat("")
+
+        //X-axis
+        svg.append("g")
+          .attr("class", "x axis")
+          .attr("transform", `translate(0,${chartHeight})`)
+          .attr("stroke-width", '0.75')
+          .attr("color", 'white')
+          .call(xAxis);
+
+        // Y-axis
+        svg.append("g")
+          .attr("class", "y axis")
+          .call(yAxis)
+          .attr("stroke-width", '0.75')
+          .attr("color", 'white')
+          .attr("font-size", 10);
+
+        // Xgridlines
+        svg.append("g")
+          .attr("class", "x grid")
+          .attr("stroke-width", '0.75')
+          .attr("color", 'white')
+          .call(xGridlines);
+
+
+        // Inspired heavily by Medium tutorial: https://medium.com/@vaibhavkumar_19430/how-to-create-a-grouped-bar-chart-in-d3-js-232c54f85894
+        var yearGraph = svg.selectAll("#year")
+          .data(data)
+          .enter()
+          .append("g")
+          .attr("id", "year")
+          .attr("transform", d => `translate(0, ${yearScale(d.Year)})`);
+
+        // Adding the bars
+        var bars = yearGraph.selectAll(".bars")
+          .data(d => [d])
+          .enter()
+          .append("rect")
+          .attr("class", "bars")
+          .attr('x', 1)
+          .attr("y", d => goodScale(d.hs2_name) + 10)
+          .style("fill", d => goodScaleColor(d.hs2_name))
+          .attr("width", d => valueScale(d.value))
+          .attr("height", goodScale.bandwidth());
+
+        // Text on top of bars: a potential option
+        // var text = yearGraph.selectAll("text")
+        //   .data(d => [d])
+        //   .enter()
+        //   .append("text")
+        //   .attr("x", 5)
+        //   .attr("y", d => goodScale(d.hs2_name) + 25)
+        //   .attr("text-anchor", "center")
+        //   .text(d => d.hs2_name)
+        //   .attr("fill","white");
+
+        //draw legend
+        svg.append('rect')
+          .attr('width', 260)
+          .attr('height', 240)
+          .attr("x", (width - 330))
+          .attr("y", 47)
+          .attr("rx", 10)
+          .attr("ry", 10)
+          .attr('fill', '#393f41')
+          .attr("transform", "translate(" + (-margin.left) + "," + (-margin.top) + ")");
+
+        let xPositionlegendSquare = 360;
+
+        // creating legend title
+        const legendTitle = svg.append('text')
+          .attr("x", (width + 25 - xPositionlegendSquare))
+          .attr("y", 17)
+          .attr('dominant-baseline', "hanging")
+          .text("Type of good")
+          .attr('fill', "white")
+          .attr('font-weight', "bold");
+
+        let yPosLegend = 43;
+
+        // Creating legend squares to show colors associated with groups
+        for (let i = 0; i < Object.keys(goods).length; i++) {
+          const legendSquare1 = svg.append('rect')
+            .attr('width', "15")
+            .attr('height', "15")
+            .attr("x", (width - xPositionlegendSquare))
+            .attr("y", (yPosLegend))
+            .attr('fill', goodScaleColor(data[i].hs2_name));
+
+          // Creating the group names to associate with the squares
+          const legend1 = svg.append('text')
+            .attr("x", (width - xPositionlegendSquare + 20))
+            .attr("y", (yPosLegend + 1))
+            .attr('dominant-baseline', "hanging")
+            .text(data[i].hs2_name)
+            .attr('fill', "white");
+
+          yPosLegend = yPosLegend + 20;
+        }
+      }, (error) => {
+        console.log(error);
+      });
+    </script>
+  </p>
+
+</body>
+<script src="maps.js"></script>
+
+</html>
